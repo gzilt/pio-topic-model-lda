@@ -1,7 +1,7 @@
 package org.template.classification
 
-import io.prediction.controller.{PAlgorithm, Params}
-import io.prediction.controller.{IPersistentModel, IPersistentModelLoader}
+import org.apache.predictionio.controller.{PAlgorithm, Params}
+import org.apache.predictionio.controller.{IPersistentModel, IPersistentModelLoader}
 
 
 import org.apache.spark.mllib.linalg.Vectors
