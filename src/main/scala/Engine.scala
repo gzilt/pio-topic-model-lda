@@ -1,6 +1,6 @@
 package org.template.classification
 
-import org.apache.predictionio.controller.IEngineFactory
+import org.apache.predictionio.controller.EngineFactory
 import org.apache.predictionio.controller.Engine
 import org.apache.spark.mllib.linalg.Vector
 
@@ -18,7 +18,7 @@ class ActualResult(
                     val text: String
 ) extends Serializable
 
-object ClassificationEngine extends IEngineFactory {
+object ClassificationEngine extends EngineFactory {
   def apply() = {
     new Engine(
       classOf[DataSource],
