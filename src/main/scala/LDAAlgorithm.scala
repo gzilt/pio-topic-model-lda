@@ -1,7 +1,7 @@
 package org.template.classification
 
 import org.apache.predictionio.controller.{PAlgorithm, Params}
-import org.apache.predictionio.controller.{IPersistentModel, IPersistentModelLoader}
+import org.apache.predictionio.controller.{PersistentModel, PersistentModelLoader}
 
 
 import org.apache.spark.mllib.linalg.Vectors
@@ -24,7 +24,7 @@ case class LDAModelWithCorpusAndVocab(
                                corpus: RDD[(String, (Long,Vector))],
                                vocab : Map[String,Int],
                                sc: SparkContext
-                               ) extends IPersistentModel[AlgorithmParams] with Serializable {
+                               ) extends PersistentModel[AlgorithmParams] with Serializable {
   def save(id: String, params: AlgorithmParams,
     sc: SparkContext): Boolean = { 
       ldaModel.save(sc, s"/tmp/${id}/ldaModel")
@@ -35,7 +35,7 @@ case class LDAModelWithCorpusAndVocab(
 }
 
 object LDAModelWithCorpusAndVocab
-  extends IPersistentModelLoader[AlgorithmParams, LDAModelWithCorpusAndVocab] {
+  extends PersistentModelLoader[AlgorithmParams, LDAModelWithCorpusAndVocab] {
   def apply(id: String, params: AlgorithmParams,
     sc: Option[SparkContext]) = {
     new LDAModelWithCorpusAndVocab(
