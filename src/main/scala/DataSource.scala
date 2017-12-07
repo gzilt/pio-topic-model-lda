@@ -1,18 +1,11 @@
 package org.template.classification
 
-import org.apache.predictionio.controller.PDataSource
-import org.apache.predictionio.controller.EmptyEvaluationInfo
-import org.apache.predictionio.controller.EmptyActualResult
-import org.apache.predictionio.controller.Params
-import org.apache.predictionio.data.storage.Event
+import org.apache.predictionio.controller.{EmptyEvaluationInfo, PDataSource, Params, SanityCheck}
 import org.apache.predictionio.data.store.PEventStore
-
 import org.apache.spark.SparkContext
-import org.apache.spark.SparkContext._
 import org.apache.spark.rdd.RDD
-import org.apache.spark.mllib.linalg.Vectors
-
 import grizzled.slf4j.Logger
+import org.apache.spark.sql.SparkSession
 
 case class DataSourceParams(
   appName: String,
@@ -25,35 +18,52 @@ class DataSource(val dsp: DataSourceParams)
 
   @transient lazy val logger = Logger[this.type]
 
+  /** Helper function used to store data given a SparkContext. */
+  private def readEventData(sc: SparkContext) : RDD[TextPoint] = {
+    //Get RDD of Events.
+    PEventStore.find(
+      appName = dsp.appName,
+      entityType = Some("source"), // specify data entity type
+      eventNames = Some(List("document")) // specify data event name
+      // Convert collected RDD of events to and RDD of Observation
+      // objects.
+    )(sc)
+    .map(e => {
+      val text : String = e.properties.get[String]("text").trim
+      TextPoint(text)
+    }).cache
+  }
+
   override
   def readTraining(sc: SparkContext): TrainingData = {
-
-  val textPoints: RDD[TextPoint] = PEventStore.aggregateProperties(
-      appName = dsp.appName,
-      entityType = "user",
-      // only keep entities with these required properties defined
-      required = Some(List("text")))(sc)
-      // aggregateProperties() returns RDD pair of
-      // entity ID and its aggregated properties
-      .map { case (entityId, properties) =>
-        try {
-          new TextPoint(properties.get[String]("text").trim)
-        } catch {
-          case e: Exception => {
-            logger.error(s"Failed to get properties ${properties} of" +
-              s" ${entityId}. Exception: ${e}.")
-            throw e
-          }
-        }
-      }.cache()
-
-    new TrainingData(textPoints)
+    new TrainingData(readEventData(sc))
   }
 
 }
 
-class TextPoint (val text: String) extends Serializable
+case class TextPoint (val text: String) extends Serializable
 
 class TrainingData(
   val trainingText: RDD[TextPoint]
-) extends Serializable
+) extends Serializable with SanityCheck {
+
+  /** Sanity check to make sure your data is being fed in correctly. */
+  def sanityCheck(): Unit = {
+    try {
+      val obs : Array[String] = trainingText.takeSample(false, 5).map(_.text)
+
+      println()
+      (0 until 5).foreach(
+        k => println("TextPoint " + (k + 1) +" label: " + obs(k))
+      )
+      println()
+    } catch {
+      case (e : ArrayIndexOutOfBoundsException) => {
+        println()
+        println("Data set is empty, make sure event fields match imported data.")
+        println()
+      }
+    }
+
+  }
+}
